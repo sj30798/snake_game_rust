@@ -1,6 +1,7 @@
 mod game;
 
 use crossterm::{cursor, execute, terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType}};
+use game::ControlMode;
 use std::io;
 
 struct TerminalGuard;
@@ -23,7 +24,29 @@ impl Drop for TerminalGuard {
 }
 
 fn main() -> io::Result<()> {
+    let mode = parse_mode();
+    let mut game = game::Game::new(mode);
+    game.prepare_auto();
+
     let _terminal_guard = TerminalGuard::setup()?;
-    let mut game = game::Game::new();
     game.run()
+}
+
+fn parse_mode() -> ControlMode {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|arg| arg == "--auto") {
+        let episodes = args
+            .iter()
+            .position(|arg| arg == "--episodes")
+            .and_then(|idx| args.get(idx + 1))
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(3000);
+
+        println!("Auto mode enabled with {} episodes", episodes);
+
+        ControlMode::Auto { episodes }
+    } else {
+        ControlMode::Manual
+    }
 }
